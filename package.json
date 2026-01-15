@@ -2,9 +2,9 @@
   "name": "todo-cli",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "todo.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev":"node todo.js show"
   },
   "keywords": [],
   "author": "",

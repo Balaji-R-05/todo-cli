@@ -1,7 +1,6 @@
 import fs from 'fs';
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { json } from 'stream/consumers';
 
 const program = new Command();
 const filePath = 'todos.json'
@@ -19,7 +18,6 @@ const readTodo = () => {
         return [];
     }
 } 
-
 
 const saveTodo = (todos) => {
     fs.writeFileSync(filePath, JSON.stringify(todos, null, 2));
