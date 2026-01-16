@@ -1,17 +1,21 @@
-# 📝 Todo CLI (JSON + ID-based)
+# 📝 Todo CLI
 
-A simple command-line todo manager built with **Node.js**, **Commander**, and **Chalk**.  
-Stores todos in a JSON file, supports adding, viewing, editing, completing, and deleting todos by ID.
+A simple command-line todo manager built with **Node.js**, **Commander**, and **Chalk**.
+Stores todos in a JSON file and supports managing tasks via a command-line interface.
 
 ---
 
 ## 📦 Features
-- Add todos with auto-incremented IDs
-- View todos with colored status (`[Pending]` / `[Completed]`)
-- Edit todos by ID
+- Add todos
+- View todos with status indicators (`[✔]` / `[ ]`)
 - Mark todos as completed
-- Delete todos by ID (auto reindexes IDs)
-- Data stored in `todo.json` file (auto-created if missing)
+- Toggle todo completion status
+- Edit existing todos
+- Delete todos
+- View statistics (completed vs pending)
+- Search todos by keyword
+- Clear all todos
+- Data stored persistently in `todos.json`
 
 ---
 
@@ -29,10 +33,26 @@ npm install
 ```
 
 ### 3. Usage
+
+All commands use the **Todo Number** (index) shown in the `show` command, not the internal ID.
+
 ```bash
-node todo.js add <todo_text>      # Adds a new todo with given text. 
-node todo.js show                  # Displays all todos with ID and status. 
-node todo.js edit <id> <new_text>  # Updates a todo’s text by its ID.
-node todo.js complete <id>         # Marks a todo as completed by its ID.
-node todo.js delete <id>           # Deletes a todo by its ID (reindexes remaining todos).
+node todo.js add <text>            # Add a new todo
+node todo.js show                  # List all todos
+node todo.js toggle <id>            # Toggle completion status of todo #id
+node todo.js complete <id>          # Mark todo #id as completed
+node todo.js edit <id> <text>       # Update text of todo #id
+node todo.js delete <id>            # Delete todo #id
+node todo.js stats                 # Show completion statistics
+node todo.js search <keyword>      # Search todos for keyword
+node todo.js clear                 # Delete ALL todos
+```
+
+### Examples
+```bash
+node todo.js add "Buy groceries"
+node todo.js show
+node todo.js toggle 1
+node todo.js search "buy"
+node todo.js stats
 ```

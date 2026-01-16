@@ -1,10 +1,10 @@
 {
   "name": "todo-cli",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "",
   "main": "todo.js",
   "scripts": {
-    "dev":"node todo.js show"
+    "dev": "node todo.js show"
   },
   "keywords": [],
   "author": "",
@@ -12,6 +12,10 @@
   "type": "module",
   "dependencies": {
     "chalk": "^5.5.0",
-    "commander": "^14.0.0"
+    "commander": "^14.0.0",
+    "uuid": "^13.0.0"
+  },
+  "bin": {
+    "todo": "./todo.js"
   }
 }
