@@ -3,7 +3,6 @@
 A simple command-line todo manager built with **Node.js**, **Commander**, and **Chalk**.
 Stores todos in a JSON file and supports managing tasks via a command-line interface.
 
----
 
 ## 📦 Features
 - Add todos
@@ -17,42 +16,63 @@ Stores todos in a JSON file and supports managing tasks via a command-line inter
 - Clear all todos
 - Data stored persistently in `todos.json`
 
----
 
 ## 🚀 Installation & Setup
 
-### 1. Clone or download this repository
+### 1. Clone the repository
 ```bash
 git clone https://github.com/Balaji-R-05/todo-cli.git
 cd todo-cli
 ```
 
-### 2. Install dependencies
-```bash
-npm install
-```
+### 2. One-Click Install
+Run the script for your Operating System to install dependencies and link the command globally:
 
-### 3. Usage
+- **Windows:** Double-click `setup.bat` or run:
+  ```cmd
+  setup.bat
+  ```
+- **Linux / macOS:** Run:
+  ```bash
+  chmod +x setup.sh && ./setup.sh
+  ```
 
-All commands use the **Todo Number** (index) shown in the `show` command, not the internal ID.
+---
 
-```bash
-node todo.js add <text>            # Add a new todo
-node todo.js show                  # List all todos
-node todo.js toggle <id>            # Toggle completion status of todo #id
-node todo.js complete <id>          # Mark todo #id as completed
-node todo.js edit <id> <text>       # Update text of todo #id
-node todo.js delete <id>            # Delete todo #id
-node todo.js stats                 # Show completion statistics
-node todo.js search <keyword>      # Search todos for keyword
-node todo.js clear                 # Delete ALL todos
-```
+## ⚡ Usage
+
+Once installed, you can run the `todo` command from **any directory** in your terminal. Note that todos are stored locally in a `todos.json` file in whichever folder you run the command.
+
+| Command | Description |
+| :--- | :--- |
+| `todo add "task"` | Add a new task |
+| `todo show` | List all tasks |
+| `todo toggle <num>` | Toggle completion of task #num |
+| `todo complete <num>` | Mark task #num as completed |
+| `todo edit <num> "text"` | Update task #num text |
+| `todo delete <num>` | Remove task #num |
+| `todo stats` | See completion stats |
+| `todo search "key"` | Find tasks by keyword |
+| `todo clear` | Delete ALL tasks |
 
 ### Examples
 ```bash
-node todo.js add "Buy groceries"
-node todo.js show
-node todo.js toggle 1
-node todo.js search "buy"
-node todo.js stats
+todo add "Master Node.js"
+todo show
+todo toggle 1
+todo search "node"
+todo stats
 ```
+
+---
+
+## 🗑 Uninstallation
+
+To fully remove the global `todo` command and clean up:
+
+1.  **Open your terminal** inside the `todo-cli` folder.
+2.  **Run the script** for your OS:
+    - **Windows:** `uninstall.bat`
+    - **Linux / macOS:** `./uninstall.sh`
+3.  **Close the terminal.**
+4.  **Delete the `todo-cli` folder** from your computer.

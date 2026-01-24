@@ -51,9 +51,7 @@ program.command('add')
         todos.push(newTodo);
         saveTodo(todos);
         console.log(chalk.green(`✔ Todo added: ${text}`));
-        // console.log(chalk.green(`ID: ${newTodo.id}`));
     });
-
 
 // Show
 program
@@ -95,7 +93,6 @@ program
 
         console.log(chalk.blue(`🗑 Deleted: ${removed[0].text}`));
     });
-
 
 // Edit
 program
@@ -140,78 +137,79 @@ program
 
 //Toggle
 program
-  .command('toggle')
-  .description('Toggle completion status of a todo')
-  .argument('<number>', 'Todo number from show command')
-  .action((num) => {
-    const index = Number(num) - 1;
-    const todos = readTodo();
+    .command('toggle')
+    .description('Toggle completion status of a todo')
+    .argument('<number>', 'Todo number from show command')
+    .action((num) => {
+        const index = Number(num) - 1;
+        const todos = readTodo();
 
-    if (!todos[index]) {
-      console.log(chalk.red('Invalid todo number.'));
-      return;
-    }
+        if (!todos[index]) {
+            console.log(chalk.red('Invalid todo number.'));
+            return;
+        }
 
-    todos[index].completed = !todos[index].completed;
-    saveTodo(todos);
+        todos[index].completed = !todos[index].completed;
+        saveTodo(todos);
 
-    const status = todos[index].completed ? 'completed' : 'pending';
-    console.log(
-      chalk.green(`✔ Todo #${num} marked as ${status}`)
-    );
-  });
-
+        const status = todos[index].completed ? 'completed' : 'pending';
+        console.log(
+            chalk.green(`✔ Todo #${num} marked as ${status}`)
+        );
+    });
 
 // Stats
 program
-  .command('stats')
-  .description('Show todo statistics')
-  .action(() => {
-    const todos = readTodo();
+    .command('stats')
+    .description('Show todo statistics')
+    .action(() => {
+        const todos = readTodo();
 
-    const total = todos.length;
-    const completed = todos.filter(t => t.completed).length;
-    const pending = total - completed;
+        const total = todos.length;
+        const completed = todos.filter(t => t.completed).length;
+        const pending = total - completed;
 
-    console.log(chalk.cyan('Todo Stats'));
-    console.log(chalk.green(`✔ Completed: ${completed}`));
-    console.log(chalk.red(`✗ Pending: ${pending}`));
-    console.log(chalk.white(`Total: ${total}`));
-  });
-
-program
-  .command('search')
-  .description('Search todos by keyword')
-  .argument('<keyword>', 'Keyword to search for')
-  .action((keyword) => {
-    const todos = readTodo();
-
-    const results = todos.filter(todo =>
-      todo.text.toLowerCase().includes(keyword.toLowerCase())
-    );
-
-    if (results.length === 0) {
-      console.log(chalk.yellow(`No todos found for "${keyword}"`));
-      return;
-    }
-
-    results.forEach(todo => {
-      const index = todos.indexOf(todo);
-      const status = todo.completed
-        ? chalk.green('[✔]')
-        : chalk.red('[ ]');
-
-      console.log(`${index + 1}. ${status} ${todo.text}`);
+        console.log(chalk.cyan('Todo Stats'));
+        console.log(chalk.green(`✔ Completed: ${completed}`));
+        console.log(chalk.red(`✗ Pending: ${pending}`));
+        console.log(chalk.white(`Total: ${total}`));
     });
-  });
 
+//search
 program
-  .command('clear')
-  .description('Clear all todos')
-  .action(() => {
-    fs.writeFileSync(filePath, JSON.stringify([]));
-    console.log(chalk.green('✔ Todos cleared successfully'));
-  });
+    .command('search')
+    .description('Search todos by keyword')
+    .argument('<keyword>', 'Keyword to search for')
+    .action((keyword) => {
+        const todos = readTodo();
+
+        const results = todos.filter(todo =>
+            todo.text.toLowerCase().includes(keyword.toLowerCase())
+        );
+
+        if (results.length === 0) {
+            console.log(chalk.yellow(`No todos found for "${keyword}"`));
+            return;
+        }
+
+        results.forEach(todo => {
+            const index = todos.indexOf(todo);
+            const status = todo.completed
+                ? chalk.green('[✔]')
+                : chalk.red('[ ]');
+
+            console.log(`${index + 1}. ${status} ${todo.text}`);
+        });
+    });
+
+//clear
+program
+    .command('clear')
+    .description('Clear all todos')
+    .action(() => {
+        fs.writeFileSync(filePath, JSON.stringify([]));
+        console.log(chalk.green('✔ Todos cleared successfully'));
+    });
 
 
 program.addHelpText('after', `

@@ -1,12 +1,20 @@
 {
   "name": "todo-cli",
   "version": "1.1.0",
-  "description": "",
+  "description": "A simple command-line todo manager built with Node.js, Commander, and Chalk.",
   "main": "todo.js",
   "scripts": {
     "dev": "node todo.js show"
   },
-  "keywords": [],
+  "keywords": [
+    "todo",
+    "cli",
+    "task-manager",
+    "productivity",
+    "commander",
+    "chalk",
+    "nodejs"
+  ],
   "author": "",
   "license": "ISC",
   "type": "module",
