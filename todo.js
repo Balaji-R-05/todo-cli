@@ -13,6 +13,7 @@ const filePath = 'todos.json'
 const readTodo = () => {
     try {
         if (!fs.existsSync(filePath)) {
+            console.log(chalk.yellow('Todo file not found. Initializing...'));
             fs.writeFileSync(filePath, JSON.stringify([]));
             return [];
         }
@@ -36,6 +37,19 @@ program
     .version('1.1.0');
 
 /* ------------------ CLI Commands ------------------ */
+
+// Init
+program
+    .command('init')
+    .description('Initialize todo-cli')
+    .action(() => {
+        if (fs.existsSync(filePath)) {
+            console.log(chalk.yellow('Todo file already exists.'));
+            return;
+        }
+        fs.writeFileSync(filePath, JSON.stringify([]));
+        console.log(chalk.green('Todo file initialized successfully.'));
+    });
 
 // Add
 program.command('add')
@@ -135,7 +149,7 @@ program
         console.log(chalk.green(`✔ Todo #${num} marked as completed`));
     });
 
-//Toggle
+// Toggle
 program
     .command('toggle')
     .description('Toggle completion status of a todo')
@@ -175,7 +189,7 @@ program
         console.log(chalk.white(`Total: ${total}`));
     });
 
-//search
+// Search
 program
     .command('search')
     .description('Search todos by keyword')
@@ -202,7 +216,7 @@ program
         });
     });
 
-//clear
+// Clear
 program
     .command('clear')
     .description('Clear all todos')
@@ -214,12 +228,16 @@ program
 
 program.addHelpText('after', `
 Examples:
-  node todo.js add "Learn Node.js"
-  node todo.js show
-  node todo.js complete 1
-  node todo.js toggle 1
-  node todo.js edit 1 "Master Commander.js"
-  node todo.js delete 1
+    todo init
+    todo add "Learn Node.js"
+    todo show
+    todo complete 1
+    todo toggle 1
+    todo edit 1 "Master Commander.js"
+    todo delete 1
+    todo stats
+    todo search "node"
+    todo clear
 `);
 
 program.parse();

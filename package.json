@@ -15,7 +15,7 @@
     "chalk",
     "nodejs"
   ],
-  "author": "",
+  "author": "Balaji-R-05",
   "license": "ISC",
   "type": "module",
   "dependencies": {
@@ -25,5 +25,8 @@
   },
   "bin": {
     "todo": "./todo.js"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   }
 }

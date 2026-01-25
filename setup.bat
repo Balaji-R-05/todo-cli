@@ -4,15 +4,15 @@ setlocal
 :: Check for npm
 where npm >nul 2>nul
 if %errorlevel% neq 0 (
-    echo Error: npm is not installed or not in PATH.
+    echo "Error: npm is not installed or not in PATH."
     pause
     exit /b 1
 )
 
-echo Installing dependencies...
+echo "Installing dependencies..."
 call npm install
 
-echo Linking command globally...
+echo "Linking command globally..."
 call npm link
 
 echo "------------------------------------------"

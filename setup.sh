@@ -1,16 +1,19 @@
 #!/bin/bash
 
-# Ensure Node.js and npm are installed
 if ! [ -x "$(command -v npm)" ]; then
-  echo 'Error: npm is not installed.' >&2
-  exit 1
+    echo 'Error: npm is not installed.' >&2
+    exit 1
 fi
 
 echo "Installing dependencies..."
 npm install
 
 echo "Linking command globally..."
-sudo npm link
+if [ "$EUID" -ne 0 ] && command -v sudo >/dev/null 2>&1; then
+    sudo npm link
+else
+    npm link
+fi
 
 echo "------------------------------------------"
 echo "Installation complete!"
