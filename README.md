@@ -4,7 +4,6 @@ Stores todos in a JSON file and supports managing tasks via a command-line inter
 
 
 ## ✨ Features
-
 - Create, edit, and delete todos directly from the terminal
 - View todos with clear completion indicators (`[✔]` / `[ ]`)
 - Mark tasks as completed or toggle their status
@@ -43,6 +42,8 @@ Run the script for your Operating System to install dependencies and link the co
   ```cmd
   setup.bat
   ```
+> If `npm link` fails, re-run `setup.bat` as **Administrator**.
+
 - **Linux / macOS:** Run:
   ```bash
   chmod +x setup.sh && ./setup.sh
@@ -58,10 +59,10 @@ Once installed, you can run the `todo` command from **any directory** in your te
 | `todo init` | Initialize todo-cli (optional) |
 | `todo add "task"` | Add a new task |
 | `todo show` | List all tasks |
-| `todo toggle <num>` | Toggle completion of task #num |
-| `todo complete <num>` | Mark task #num as completed |
-| `todo edit <num> "text"` | Update task #num text |
-| `todo delete <num>` | Remove task #num |
+| `todo toggle <num>` | Toggle completion of task |
+| `todo complete <num>` | Mark task as completed |
+| `todo edit <num> "text"` | Update task text |
+| `todo delete <num>` | Remove task |
 | `todo stats` | See completion stats |
 | `todo search "key"` | Find tasks by keyword |
 | `todo clear` | Delete ALL tasks |

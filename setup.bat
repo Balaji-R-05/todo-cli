@@ -1,7 +1,6 @@
 @echo off
 setlocal
 
-:: Check for npm
 where npm >nul 2>nul
 if %errorlevel% neq 0 (
     echo "Error: npm is not installed or not in PATH."
@@ -20,4 +19,3 @@ echo "Installation complete!"
 echo "You can now use the 'todo' command."
 echo "Try running: todo --help"
 echo "------------------------------------------"
-pause
