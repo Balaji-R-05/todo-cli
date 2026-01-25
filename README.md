@@ -4,7 +4,6 @@ Stores todos in a JSON file and supports managing tasks via a command-line inter
 
 
 ## ✨ Features
-
 - Create, edit, and delete todos directly from the terminal
 - View todos with clear completion indicators (`[✔]` / `[ ]`)
 - Mark tasks as completed or toggle their status
@@ -43,6 +42,8 @@ Run the script for your Operating System to install dependencies and link the co
   ```cmd
   setup.bat
   ```
+> If `npm link` fails, re-run `setup.bat` as **Administrator**.
+
 - **Linux / macOS:** Run:
   ```bash
   chmod +x setup.sh && ./setup.sh

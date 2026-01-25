@@ -1,19 +1,22 @@
 #!/bin/bash
+set -e
 
-if ! [ -x "$(command -v npm)" ]; then
-    echo 'Error: npm is not installed.' >&2
-    exit 1
+if [ "$EUID" -eq 0 ]; then
+  echo "Error: Do not run this script as root or with sudo."
+  echo "Please run it as a normal user."
+  exit 1
+fi
+
+if ! command -v npm >/dev/null 2>&1; then
+  echo "Error: npm is not installed."
+  exit 1
 fi
 
 echo "Installing dependencies..."
 npm install
 
 echo "Linking command globally..."
-if [ "$EUID" -ne 0 ] && command -v sudo >/dev/null 2>&1; then
-    sudo npm link
-else
-    npm link
-fi
+npm link
 
 echo "------------------------------------------"
 echo "Installation complete!"
