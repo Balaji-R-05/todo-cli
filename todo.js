@@ -53,6 +53,7 @@ program
 
 // Add
 program.command('add')
+    .alias('a')
     .description('Add a new todo')
     .argument('<string>', 'Todo text')
     .action((text) => {
@@ -70,6 +71,7 @@ program.command('add')
 // Show
 program
     .command('show')
+    .alias('ls')
     .description('Show all todos')
     .action(() => {
         const todos = readTodo();
@@ -91,6 +93,7 @@ program
 // Delete
 program
     .command('delete')
+    .alias('d')
     .description('Delete a todo')
     .argument('<number>', 'Todo number')
     .action((num) => {
@@ -111,6 +114,7 @@ program
 // Edit
 program
     .command('edit')
+    .alias('e')
     .description('Edit a todo')
     .argument('<number>', 'Todo number')
     .argument('<newText>', 'New todo text')
@@ -132,6 +136,7 @@ program
 // Complete
 program
     .command('complete')
+    .alias('c')
     .description('Mark a todo as completed')
     .argument('<number>', 'Todo number from show command')
     .action((num) => {
@@ -152,6 +157,7 @@ program
 // Toggle
 program
     .command('toggle')
+    .alias('t')
     .description('Toggle completion status of a todo')
     .argument('<number>', 'Todo number from show command')
     .action((num) => {
@@ -175,6 +181,7 @@ program
 // Stats
 program
     .command('stats')
+    .alias('st')
     .description('Show todo statistics')
     .action(() => {
         const todos = readTodo();
@@ -192,6 +199,7 @@ program
 // Search
 program
     .command('search')
+    .alias('se')
     .description('Search todos by keyword')
     .argument('<keyword>', 'Keyword to search for')
     .action((keyword) => {
@@ -219,6 +227,7 @@ program
 // Clear
 program
     .command('clear')
+    .alias('cls')
     .description('Clear all todos')
     .action(() => {
         fs.writeFileSync(filePath, JSON.stringify([]));
@@ -229,15 +238,15 @@ program
 program.addHelpText('after', `
 Examples:
     todo init
-    todo add "Learn Node.js"
-    todo show
-    todo complete 1
-    todo toggle 1
-    todo edit 1 "Master Commander.js"
-    todo delete 1
-    todo stats
-    todo search "node"
-    todo clear
+    todo add | a "Learn Node.js"
+    todo show | ls
+    todo complete | c 1
+    todo toggle | t 1
+    todo edit | e 1 "Master Commander.js"
+    todo delete | d 1
+    todo stats | st
+    todo search | se "node"
+    todo clear | cls
 `);
 
 program.parse();

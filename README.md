@@ -54,28 +54,31 @@ Run the script for your Operating System to install dependencies and link the co
 
 Once installed, you can run the `todo` command from **any directory** in your terminal. Note that todos are stored locally in a `todos.json` file in whichever folder you run the command.
 
-| Command | Description |
-| :--- | :--- |
-| `todo init` | Initialize todo-cli (optional) |
-| `todo add "task"` | Add a new task |
-| `todo show` | List all tasks |
-| `todo toggle <num>` | Toggle completion of task |
-| `todo complete <num>` | Mark task as completed |
-| `todo edit <num> "text"` | Update task text |
-| `todo delete <num>` | Remove task |
-| `todo stats` | See completion stats |
-| `todo search "key"` | Find tasks by keyword |
-| `todo clear` | Delete ALL tasks |
+| Command | Shorthand | Description |
+| :--- | :--- | :--- |
+| `todo init` | - | Initialize todo-cli (optional) |
+| `todo add "task"` | `a` | Add a new task |
+| `todo show` | `ls` | List all tasks |
+| `todo toggle <num>` | `t` | Toggle completion of task |
+| `todo complete <num>` | `c` | Mark task as completed |
+| `todo edit <num> "text"`| `e` | Update task text |
+| `todo delete <num>` | `d` | Remove task |
+| `todo stats` | `st` | See completion stats |
+| `todo search "key"` | `se` | Find tasks by keyword |
+| `todo clear` | `cls` | Delete ALL tasks |
 
 ### Examples
 ```bash
 todo init
-todo add "Master Node.js"
-todo show
-todo toggle 1
-todo search "node"
-todo stats
-todo clear
+todo add | a "Master Node.js"
+todo show | ls 
+todo toggle | t 1
+todo complete | c 1
+todo edit | e 1 "Master Node.js"
+todo delete | d 1
+todo stats | st
+todo search | se "node"
+todo clear | cls
 ```
 
 
