@@ -1,4 +1,6 @@
 # >_ Todo CLI
+[![CI](https://github.com/Balaji-R-05/todo-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/Balaji-R-05/todo-cli/actions/workflows/ci.yml)
+
 A simple command-line todo manager built with **Node.js**, **Commander**, and **Chalk**.
 Stores todos in a JSON file and supports managing tasks via a command-line interface for individual folders.
 
@@ -11,6 +13,7 @@ Stores todos in a JSON file and supports managing tasks via a command-line inter
 - View completion statistics (completed vs pending)
 - Clear all todos with a single command
 - Persistent local storage using `todos.json`
+- `--json` output mode for scripting and AI agent/tool use (Claude Code, Codex, etc.)
 
 
 ## Prerequisites
@@ -89,6 +92,28 @@ todo ls
 todo -g ls
 ```
 
+### ✨ JSON Mode (scripting & AI agents)
+Add `-j`/`--json` to any command to get a single machine-readable JSON line
+on stdout instead of colored text. Success and failure both print JSON, so
+scripts and agents (Claude Code, Codex, etc.) can parse the result
+reliably instead of regex-matching colored text:
+```bash
+todo --json add "Buy milk"
+# {"ok":true,"data":{"id":"0a21b654-...","text":"Buy milk","completed":false}}
+
+todo --json show
+# {"ok":true,"data":[{"id":"...","text":"Buy milk","completed":false}]}
+
+todo --json complete zzzzzz
+# {"ok":false,"error":"No todo found with ID \"zzzzzz\"."}
+```
+- Success shape: `{ "ok": true, "data": ... }`
+- Error shape: `{ "ok": false, "error": "message" }`
+- `data` always includes the full todo ID (not the truncated short ID used
+  in text mode), so a script/agent can target a todo unambiguously.
+- `todo --json clear` requires `--yes` — it refuses rather than hanging on
+  an interactive confirmation prompt.
+
 
 ## Development
 
@@ -99,6 +124,10 @@ npm test
 ```
 No extra dependencies needed — it uses Node's built-in test runner
 (`node --test`).
+
+CI runs this same suite on every push/PR to `main`, across Node 20.x and
+the latest LTS, on both Ubuntu and Windows — see
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 
 
 ## Uninstallation

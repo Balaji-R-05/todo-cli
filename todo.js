@@ -33,6 +33,23 @@ const getFilePath = () => {
     return localFilePath;
 };
 
+const isJsonMode = () => Boolean(program.opts().json);
+
+// Prints a single JSON line on success. Only ever called in --json mode.
+const printSuccess = (data) => {
+    console.log(JSON.stringify({ ok: true, data }));
+};
+
+// Prints an error either as a JSON line or as chalk-colored text,
+// depending on --json. Used for both validation and "no match" cases.
+const printError = (message, extra = {}) => {
+    if (isJsonMode()) {
+        console.log(JSON.stringify({ ok: false, error: message, ...extra }));
+    } else {
+        console.log(chalk.red(message));
+    }
+};
+
 /* ------------------ Utils ------------------ */
 
 const readTodo = () => {
@@ -52,9 +69,18 @@ const readTodo = () => {
         // Stop before any command can write over the broken file.
         const backupPath = `${filePath}.corrupt-${Date.now()}.bak`;
         fs.copyFileSync(filePath, backupPath);
-        console.error(chalk.red(`Todo file is corrupted (${error.message}).`));
-        console.error(chalk.yellow(`Backup saved to: ${backupPath}`));
-        console.error(chalk.yellow(`Original left untouched: ${filePath}`));
+        if (isJsonMode()) {
+            console.log(JSON.stringify({
+                ok: false,
+                error: `Todo file is corrupted (${error.message}).`,
+                backupPath,
+                originalPath: filePath
+            }));
+        } else {
+            console.error(chalk.red(`Todo file is corrupted (${error.message}).`));
+            console.error(chalk.yellow(`Backup saved to: ${backupPath}`));
+            console.error(chalk.yellow(`Original left untouched: ${filePath}`));
+        }
         process.exit(1);
     }
 };
@@ -74,13 +100,13 @@ const resolveTodo = (todos, query) => {
     const result = findTodoIndex(todos, query);
     switch (result.status) {
         case 'too-short':
-            console.log(chalk.red(`Todo ID must be at least ${MIN_ID_QUERY_LENGTH} characters. Use the ID shown by "todo ls".`));
+            printError(`Todo ID must be at least ${MIN_ID_QUERY_LENGTH} characters. Use the ID shown by "todo ls".`);
             return null;
         case 'not-found':
-            console.log(chalk.red(`No todo found with ID "${query}".`));
+            printError(`No todo found with ID "${query}".`);
             return null;
         case 'ambiguous':
-            console.log(chalk.red(`ID "${query}" matches ${result.count} todos. Type more characters.`));
+            printError(`ID "${query}" matches ${result.count} todos. Type more characters.`, { matchCount: result.count });
             return null;
         default:
             return result.index;
@@ -110,7 +136,8 @@ program
     .name('Todo-CLI')
     .description('CLI Todo Manager with JSON and short IDs. Built using Commander.js')
     .version(pkg.version)
-    .option('-g, --global', 'Use global todo list stored in home directory');
+    .option('-g, --global', 'Use global todo list stored in home directory')
+    .option('-j, --json', 'Output machine-readable JSON instead of formatted text');
 
 /* ------------------ CLI Commands ------------------ */
 
@@ -121,11 +148,19 @@ program
     .action(() => {
         const filePath = getFilePath();
         if (fs.existsSync(filePath)) {
-            console.log(chalk.yellow(`Todo file already exists: ${filePath}`));
+            if (isJsonMode()) {
+                printSuccess({ path: filePath, created: false });
+            } else {
+                console.log(chalk.yellow(`Todo file already exists: ${filePath}`));
+            }
             return;
         }
         saveTodo([]);
-        console.log(chalk.green(`Todo file initialized: ${filePath}`));
+        if (isJsonMode()) {
+            printSuccess({ path: filePath, created: true });
+        } else {
+            console.log(chalk.green(`Todo file initialized: ${filePath}`));
+        }
     });
 
 // Add
@@ -136,7 +171,7 @@ program.command('add')
     .action((text) => {
         const trimmed = text.trim();
         if (!trimmed) {
-            console.log(chalk.red('Todo text cannot be empty.'));
+            printError('Todo text cannot be empty.');
             return;
         }
 
@@ -148,7 +183,12 @@ program.command('add')
         };
         todos.push(newTodo);
         saveTodo(todos);
-        console.log(chalk.green(`✔ Todo added (${shortId(newTodo)}): ${trimmed}`));
+
+        if (isJsonMode()) {
+            printSuccess(newTodo);
+        } else {
+            console.log(chalk.green(`✔ Todo added (${shortId(newTodo)}): ${trimmed}`));
+        }
     });
 
 // Show
@@ -158,6 +198,11 @@ program
     .description('Show all todos')
     .action(() => {
         const todos = readTodo();
+
+        if (isJsonMode()) {
+            printSuccess(todos);
+            return;
+        }
 
         if (todos.length === 0) {
             console.log(chalk.yellow('No todos found.'));
@@ -184,10 +229,14 @@ program
             return;
         }
 
-        const removed = todos.splice(index, 1);
+        const [removed] = todos.splice(index, 1);
         saveTodo(todos);
 
-        console.log(chalk.blue(`🗑 Deleted: ${removed[0].text}`));
+        if (isJsonMode()) {
+            printSuccess(removed);
+        } else {
+            console.log(chalk.blue(`🗑 Deleted: ${removed.text}`));
+        }
     });
 
 // Edit
@@ -206,14 +255,18 @@ program
 
         const trimmed = newText.trim();
         if (!trimmed) {
-            console.log(chalk.red('Todo text cannot be empty.'));
+            printError('Todo text cannot be empty.');
             return;
         }
 
         todos[index].text = trimmed;
         saveTodo(todos);
 
-        console.log(chalk.green(`✔ Todo ${shortId(todos[index])} updated`));
+        if (isJsonMode()) {
+            printSuccess(todos[index]);
+        } else {
+            console.log(chalk.green(`✔ Todo ${shortId(todos[index])} updated`));
+        }
     });
 
 // Complete
@@ -232,7 +285,11 @@ program
         todos[index].completed = true;
         saveTodo(todos);
 
-        console.log(chalk.green(`✔ Todo ${shortId(todos[index])} marked as completed`));
+        if (isJsonMode()) {
+            printSuccess(todos[index]);
+        } else {
+            console.log(chalk.green(`✔ Todo ${shortId(todos[index])} marked as completed`));
+        }
     });
 
 // Toggle
@@ -250,6 +307,11 @@ program
 
         todos[index].completed = !todos[index].completed;
         saveTodo(todos);
+
+        if (isJsonMode()) {
+            printSuccess(todos[index]);
+            return;
+        }
 
         const status = todos[index].completed ? 'completed' : 'pending';
         console.log(
@@ -269,6 +331,11 @@ program
         const completed = todos.filter(t => t.completed).length;
         const pending = total - completed;
 
+        if (isJsonMode()) {
+            printSuccess({ total, completed, pending });
+            return;
+        }
+
         console.log(chalk.cyan('Todo Stats'));
         console.log(chalk.green(`✔ Completed: ${completed}`));
         console.log(chalk.red(`✗ Pending: ${pending}`));
@@ -286,6 +353,11 @@ program
         const lowerKeyword = keyword.toLowerCase();
 
         const results = todos.filter(todo => todo.text.toLowerCase().includes(lowerKeyword));
+
+        if (isJsonMode()) {
+            printSuccess(results);
+            return;
+        }
 
         if (results.length === 0) {
             console.log(chalk.yellow(`No todos found for "${keyword}"`));
@@ -306,11 +378,21 @@ program
     .action(async (options) => {
         const todos = readTodo();
         if (todos.length === 0) {
-            console.log(chalk.yellow('No todos to clear.'));
+            if (isJsonMode()) {
+                printSuccess({ clearedCount: 0 });
+            } else {
+                console.log(chalk.yellow('No todos to clear.'));
+            }
             return;
         }
 
         if (!options.yes) {
+            if (isJsonMode()) {
+                // An interactive prompt would hang a non-interactive/agent caller.
+                printError('Refusing to clear without confirmation in --json mode. Pass --yes to proceed.');
+                return;
+            }
+
             const confirmed = await confirm(
                 chalk.yellow(`This will delete ${todos.length} todo(s). Continue? (y/N) `)
             );
@@ -320,8 +402,14 @@ program
             }
         }
 
+        const clearedCount = todos.length;
         saveTodo([]);
-        console.log(chalk.green('✔ Todos cleared successfully'));
+
+        if (isJsonMode()) {
+            printSuccess({ clearedCount });
+        } else {
+            console.log(chalk.green('✔ Todos cleared successfully'));
+        }
     });
 
 
