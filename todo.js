@@ -8,6 +8,7 @@ import { randomUUID } from 'crypto';
 import { createRequire } from 'module';
 import { Command } from 'commander';
 import chalk from 'chalk';
+import { shortId, findTodoIndex, MIN_ID_QUERY_LENGTH } from './lib.js';
 
 const require = createRequire(import.meta.url);
 const pkg = require('./package.json');
@@ -17,9 +18,6 @@ const program = new Command();
 const localFilePath = path.resolve('todos.json');
 const globalDir = path.join(os.homedir(), '.todo-cli');
 const globalFilePath = path.join(globalDir, 'todos.json');
-
-const SHORT_ID_LENGTH = 6;
-const MIN_ID_QUERY_LENGTH = 4;
 
 const getFilePath = () => {
     const options = program.opts();
@@ -70,30 +68,23 @@ const saveTodo = (todos) => {
     fs.renameSync(tmpPath, filePath);
 };
 
-const shortId = (todo) => String(todo.id).slice(0, SHORT_ID_LENGTH);
-
 // Resolves a short ID (or any unique prefix of the full ID) to a list index.
 // Prints an error and returns null if nothing or more than one todo matches.
 const resolveTodo = (todos, query) => {
-    const q = String(query).trim().toLowerCase();
-    if (q.length < MIN_ID_QUERY_LENGTH) {
-        console.log(chalk.red(`Todo ID must be at least ${MIN_ID_QUERY_LENGTH} characters. Use the ID shown by "todo ls".`));
-        return null;
+    const result = findTodoIndex(todos, query);
+    switch (result.status) {
+        case 'too-short':
+            console.log(chalk.red(`Todo ID must be at least ${MIN_ID_QUERY_LENGTH} characters. Use the ID shown by "todo ls".`));
+            return null;
+        case 'not-found':
+            console.log(chalk.red(`No todo found with ID "${query}".`));
+            return null;
+        case 'ambiguous':
+            console.log(chalk.red(`ID "${query}" matches ${result.count} todos. Type more characters.`));
+            return null;
+        default:
+            return result.index;
     }
-
-    const matches = todos
-        .map((todo, index) => ({ todo, index }))
-        .filter(({ todo }) => String(todo.id).toLowerCase().startsWith(q));
-
-    if (matches.length === 0) {
-        console.log(chalk.red(`No todo found with ID "${query}".`));
-        return null;
-    }
-    if (matches.length > 1) {
-        console.log(chalk.red(`ID "${query}" matches ${matches.length} todos. Type more characters.`));
-        return null;
-    }
-    return matches[0].index;
 };
 
 const formatTodo = (todo) => {

@@ -65,7 +65,7 @@ Once installed, you can run the `todo` command from **any directory** in your te
 | `todo delete <id>` | `d` | Remove task |
 | `todo stats` | `st` | See completion stats |
 | `todo search "key"` | `se` | Find tasks by keyword |
-| `todo clear` | `cls` | Delete ALL tasks |
+| `todo clear` | `cls` | Delete ALL tasks (asks to confirm; use `-y` to skip) |
 
 Tasks are referenced by the short ID shown in `todo ls` (for example `a1b2c3`). IDs don't change when other tasks are deleted. You can type any unique prefix of at least 4 characters.
 
@@ -88,6 +88,17 @@ todo -g a "Global task for my main list"
 todo ls
 todo -g ls
 ```
+
+
+## Development
+
+Run the test suite (unit tests for ID matching + integration tests that
+spawn the CLI against a temp directory) with:
+```bash
+npm test
+```
+No extra dependencies needed — it uses Node's built-in test runner
+(`node --test`).
 
 
 ## Uninstallation

@@ -1,5 +1,25 @@
-# Ignore node_modules and todos.json
+# Dependencies
 node_modules
-todos.json
 
-data.md
+# Todo data and backups (user-specific, not source)
+todos.json
+*.tmp
+*.corrupt-*.bak
+
+# Logs
+npm-debug.log*
+*.log
+
+# Env / secrets
+.env
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Planning doc (personal roadmap, not shipped)
+PLAN.md

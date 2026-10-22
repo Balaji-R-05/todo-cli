@@ -4,7 +4,8 @@
   "description": "A simple command-line todo manager built with Node.js, Commander, and Chalk.",
   "main": "todo.js",
   "scripts": {
-    "dev": "node todo.js show"
+    "dev": "node todo.js show",
+    "test": "node --test"
   },
   "keywords": [
     "todo",
