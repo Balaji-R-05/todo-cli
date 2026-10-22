@@ -57,28 +57,36 @@ Once installed, you can run the `todo` command from **any directory** in your te
 | Command | Shorthand | Description |
 | :--- | :--- | :--- |
 | `todo init` | - | Initialize todo-cli (optional) |
-| `todo add "task"` | `a` | Add a new task |
+| `todo add "task"` | `a` | Add a new task (local or global) |
 | `todo show` | `ls` | List all tasks |
-| `todo toggle <num>` | `t` | Toggle completion of task |
-| `todo complete <num>` | `c` | Mark task as completed |
-| `todo edit <num> "text"`| `e` | Update task text |
-| `todo delete <num>` | `d` | Remove task |
+| `todo toggle <id>` | `t` | Toggle completion of task |
+| `todo complete <id>` | `c` | Mark task as completed |
+| `todo edit <id> "text"`| `e` | Update task text |
+| `todo delete <id>` | `d` | Remove task |
 | `todo stats` | `st` | See completion stats |
 | `todo search "key"` | `se` | Find tasks by keyword |
 | `todo clear` | `cls` | Delete ALL tasks |
 
+Tasks are referenced by the short ID shown in `todo ls` (for example `a1b2c3`). IDs don't change when other tasks are deleted. You can type any unique prefix of at least 4 characters.
+
+### ✨ Global Storage
+Use the `-g` or `--global` flag with any command to manage a central todo list in your home directory (`~/.todo-cli/todos.json`). This allows you to access the same tasks from any project folder.
+
+```bash
+todo -g a "Central task"
+todo -g ls
+todo -g stats
+```
+
 ### Examples
 ```bash
-todo init
-todo add | a "Master Node.js"
-todo show | ls 
-todo toggle | t 1
-todo complete | c 1
-todo edit | e 1 "Master Node.js"
-todo delete | d 1
-todo stats | st
-todo search | se "node"
-todo clear | cls
+# Managed separately
+todo a "Local task for this folder"
+todo -g a "Global task for my main list"
+
+# View both
+todo ls
+todo -g ls
 ```
 
 

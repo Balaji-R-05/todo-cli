@@ -20,8 +20,7 @@
   "type": "module",
   "dependencies": {
     "chalk": "^5.5.0",
-    "commander": "^14.0.0",
-    "uuid": "^13.0.0"
+    "commander": "^14.0.0"
   },
   "bin": {
     "todo": "./todo.js"

@@ -1,54 +1,140 @@
 #!/usr/bin/env node
 
 import fs from 'fs';
+import path from 'path';
+import os from 'os';
+import readline from 'readline';
+import { randomUUID } from 'crypto';
+import { createRequire } from 'module';
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { v4 as uuidv4 } from 'uuid';
+
+const require = createRequire(import.meta.url);
+const pkg = require('./package.json');
 
 const program = new Command();
-const filePath = 'todos.json'
+
+const localFilePath = path.resolve('todos.json');
+const globalDir = path.join(os.homedir(), '.todo-cli');
+const globalFilePath = path.join(globalDir, 'todos.json');
+
+const SHORT_ID_LENGTH = 6;
+const MIN_ID_QUERY_LENGTH = 4;
+
+const getFilePath = () => {
+    const options = program.opts();
+    if (options.global) {
+        if (!fs.existsSync(globalDir)) {
+            fs.mkdirSync(globalDir, { recursive: true });
+        }
+        if (!fs.existsSync(globalFilePath)) {
+            fs.writeFileSync(globalFilePath, JSON.stringify([]));
+        }
+        return globalFilePath;
+    }
+    return localFilePath;
+};
 
 /* ------------------ Utils ------------------ */
 
 const readTodo = () => {
-    try {
-        if (!fs.existsSync(filePath)) {
-            console.log(chalk.yellow('Todo file not found. Initializing...'));
-            fs.writeFileSync(filePath, JSON.stringify([]));
-            return [];
-        }
-        const todos = fs.readFileSync(filePath, 'utf-8');
-        return JSON.parse(todos);
-    } catch (error) {
-        console.error(chalk.red('Error reading todo file:'), error);
+    const filePath = getFilePath();
+    if (!fs.existsSync(filePath)) {
         return [];
     }
-}
 
+    const raw = fs.readFileSync(filePath, 'utf-8');
+    try {
+        const todos = JSON.parse(raw);
+        if (!Array.isArray(todos)) {
+            throw new Error('expected a JSON array');
+        }
+        return todos;
+    } catch (error) {
+        // Stop before any command can write over the broken file.
+        const backupPath = `${filePath}.corrupt-${Date.now()}.bak`;
+        fs.copyFileSync(filePath, backupPath);
+        console.error(chalk.red(`Todo file is corrupted (${error.message}).`));
+        console.error(chalk.yellow(`Backup saved to: ${backupPath}`));
+        console.error(chalk.yellow(`Original left untouched: ${filePath}`));
+        process.exit(1);
+    }
+};
+
+// Write to a temp file first, then rename over the original,
+// so a crash mid-write cannot leave a half-written todos.json.
 const saveTodo = (todos) => {
-    fs.writeFileSync(filePath, JSON.stringify(todos, null, 2));
+    const filePath = getFilePath();
+    const tmpPath = `${filePath}.tmp`;
+    fs.writeFileSync(tmpPath, JSON.stringify(todos, null, 2));
+    fs.renameSync(tmpPath, filePath);
+};
+
+const shortId = (todo) => String(todo.id).slice(0, SHORT_ID_LENGTH);
+
+// Resolves a short ID (or any unique prefix of the full ID) to a list index.
+// Prints an error and returns null if nothing or more than one todo matches.
+const resolveTodo = (todos, query) => {
+    const q = String(query).trim().toLowerCase();
+    if (q.length < MIN_ID_QUERY_LENGTH) {
+        console.log(chalk.red(`Todo ID must be at least ${MIN_ID_QUERY_LENGTH} characters. Use the ID shown by "todo ls".`));
+        return null;
+    }
+
+    const matches = todos
+        .map((todo, index) => ({ todo, index }))
+        .filter(({ todo }) => String(todo.id).toLowerCase().startsWith(q));
+
+    if (matches.length === 0) {
+        console.log(chalk.red(`No todo found with ID "${query}".`));
+        return null;
+    }
+    if (matches.length > 1) {
+        console.log(chalk.red(`ID "${query}" matches ${matches.length} todos. Type more characters.`));
+        return null;
+    }
+    return matches[0].index;
+};
+
+const formatTodo = (todo) => {
+    const status = todo.completed
+        ? chalk.green('[✔]')
+        : chalk.red('[ ]');
+    return `${chalk.gray(shortId(todo))} ${status} ${todo.text}`;
+};
+
+const confirm = (question) => {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    return new Promise((resolve) => {
+        rl.question(question, (answer) => {
+            rl.close();
+            resolve(/^y(es)?$/i.test(answer.trim()));
+        });
+    });
 };
 
 /* ------------------ CLI Setup ------------------ */
 
 program
     .name('Todo-CLI')
-    .description('CLI Todo Manager with JSON and IDs. Built using Commander.js')
-    .version('1.1.0');
+    .description('CLI Todo Manager with JSON and short IDs. Built using Commander.js')
+    .version(pkg.version)
+    .option('-g, --global', 'Use global todo list stored in home directory');
 
 /* ------------------ CLI Commands ------------------ */
 
 // Init
 program
     .command('init')
-    .description('Initialize todo-cli')
+    .description('Initialize todo-cli (local or global)')
     .action(() => {
+        const filePath = getFilePath();
         if (fs.existsSync(filePath)) {
-            console.log(chalk.yellow('Todo file already exists.'));
+            console.log(chalk.yellow(`Todo file already exists: ${filePath}`));
             return;
         }
-        fs.writeFileSync(filePath, JSON.stringify([]));
-        console.log(chalk.green('Todo file initialized successfully.'));
+        saveTodo([]);
+        console.log(chalk.green(`Todo file initialized: ${filePath}`));
     });
 
 // Add
@@ -57,15 +143,21 @@ program.command('add')
     .description('Add a new todo')
     .argument('<string>', 'Todo text')
     .action((text) => {
+        const trimmed = text.trim();
+        if (!trimmed) {
+            console.log(chalk.red('Todo text cannot be empty.'));
+            return;
+        }
+
         const todos = readTodo();
         const newTodo = {
-            id: uuidv4(),
-            text: text,
+            id: randomUUID(),
+            text: trimmed,
             completed: false
         };
         todos.push(newTodo);
         saveTodo(todos);
-        console.log(chalk.green(`✔ Todo added: ${text}`));
+        console.log(chalk.green(`✔ Todo added (${shortId(newTodo)}): ${trimmed}`));
     });
 
 // Show
@@ -78,15 +170,13 @@ program
 
         if (todos.length === 0) {
             console.log(chalk.yellow('No todos found.'));
+            console.log(chalk.gray(`Using: ${getFilePath()}`));
+            console.log(chalk.gray('Add one with "todo a <text>", or use -g for the global list.'));
             return;
         }
 
-        todos.forEach((todo, index) => {
-            const status = todo.completed
-                ? chalk.green('[✔]')
-                : chalk.red('[ ]');
-
-            console.log(`${index + 1}. ${status} ${todo.text}`);
+        todos.forEach((todo) => {
+            console.log(formatTodo(todo));
         });
     });
 
@@ -95,13 +185,11 @@ program
     .command('delete')
     .alias('d')
     .description('Delete a todo')
-    .argument('<number>', 'Todo number')
-    .action((num) => {
-        const index = Number(num) - 1;
+    .argument('<id>', 'Todo ID from show command')
+    .action((id) => {
         const todos = readTodo();
-
-        if (!todos[index]) {
-            console.log(chalk.red('Invalid todo number.'));
+        const index = resolveTodo(todos, id);
+        if (index === null) {
             return;
         }
 
@@ -116,21 +204,25 @@ program
     .command('edit')
     .alias('e')
     .description('Edit a todo')
-    .argument('<number>', 'Todo number')
+    .argument('<id>', 'Todo ID from show command')
     .argument('<newText>', 'New todo text')
-    .action((num, newText) => {
-        const index = Number(num) - 1;
+    .action((id, newText) => {
         const todos = readTodo();
-
-        if (!todos[index]) {
-            console.log(chalk.red('Invalid todo number.'));
+        const index = resolveTodo(todos, id);
+        if (index === null) {
             return;
         }
 
-        todos[index].text = newText;
+        const trimmed = newText.trim();
+        if (!trimmed) {
+            console.log(chalk.red('Todo text cannot be empty.'));
+            return;
+        }
+
+        todos[index].text = trimmed;
         saveTodo(todos);
 
-        console.log(chalk.green(`✔ Todo #${num} updated`));
+        console.log(chalk.green(`✔ Todo ${shortId(todos[index])} updated`));
     });
 
 // Complete
@@ -138,20 +230,18 @@ program
     .command('complete')
     .alias('c')
     .description('Mark a todo as completed')
-    .argument('<number>', 'Todo number from show command')
-    .action((num) => {
-        const index = Number(num) - 1;
+    .argument('<id>', 'Todo ID from show command')
+    .action((id) => {
         const todos = readTodo();
-
-        if (!todos[index]) {
-            console.log(chalk.red('Invalid todo number.'));
+        const index = resolveTodo(todos, id);
+        if (index === null) {
             return;
         }
 
         todos[index].completed = true;
         saveTodo(todos);
 
-        console.log(chalk.green(`✔ Todo #${num} marked as completed`));
+        console.log(chalk.green(`✔ Todo ${shortId(todos[index])} marked as completed`));
     });
 
 // Toggle
@@ -159,13 +249,11 @@ program
     .command('toggle')
     .alias('t')
     .description('Toggle completion status of a todo')
-    .argument('<number>', 'Todo number from show command')
-    .action((num) => {
-        const index = Number(num) - 1;
+    .argument('<id>', 'Todo ID from show command')
+    .action((id) => {
         const todos = readTodo();
-
-        if (!todos[index]) {
-            console.log(chalk.red('Invalid todo number.'));
+        const index = resolveTodo(todos, id);
+        if (index === null) {
             return;
         }
 
@@ -174,7 +262,7 @@ program
 
         const status = todos[index].completed ? 'completed' : 'pending';
         console.log(
-            chalk.green(`✔ Todo #${num} marked as ${status}`)
+            chalk.green(`✔ Todo ${shortId(todos[index])} marked as ${status}`)
         );
     });
 
@@ -204,23 +292,17 @@ program
     .argument('<keyword>', 'Keyword to search for')
     .action((keyword) => {
         const todos = readTodo();
+        const lowerKeyword = keyword.toLowerCase();
 
-        const results = todos.filter(todo =>
-            todo.text.toLowerCase().includes(keyword.toLowerCase())
-        );
+        const results = todos.filter(todo => todo.text.toLowerCase().includes(lowerKeyword));
 
         if (results.length === 0) {
             console.log(chalk.yellow(`No todos found for "${keyword}"`));
             return;
         }
 
-        results.forEach(todo => {
-            const index = todos.indexOf(todo);
-            const status = todo.completed
-                ? chalk.green('[✔]')
-                : chalk.red('[ ]');
-
-            console.log(`${index + 1}. ${status} ${todo.text}`);
+        results.forEach((todo) => {
+            console.log(formatTodo(todo));
         });
     });
 
@@ -229,23 +311,47 @@ program
     .command('clear')
     .alias('cls')
     .description('Clear all todos')
-    .action(() => {
-        fs.writeFileSync(filePath, JSON.stringify([]));
+    .option('-y, --yes', 'Skip confirmation prompt')
+    .action(async (options) => {
+        const todos = readTodo();
+        if (todos.length === 0) {
+            console.log(chalk.yellow('No todos to clear.'));
+            return;
+        }
+
+        if (!options.yes) {
+            const confirmed = await confirm(
+                chalk.yellow(`This will delete ${todos.length} todo(s). Continue? (y/N) `)
+            );
+            if (!confirmed) {
+                console.log(chalk.yellow('Cancelled.'));
+                return;
+            }
+        }
+
+        saveTodo([]);
         console.log(chalk.green('✔ Todos cleared successfully'));
     });
 
 
 program.addHelpText('after', `
+Todos are referenced by the short ID shown in "todo ls" (e.g. a1b2c3).
+IDs stay the same when other todos are deleted.
+
 Examples:
     todo init
-    todo add | a "Learn Node.js"
-    todo show | ls
-    todo complete | c 1
-    todo toggle | t 1
-    todo edit | e 1 "Master Commander.js"
-    todo delete | d 1
-    todo stats | st
-    todo search | se "node"
+    todo a "Project Task"
+    todo -g a "Global Task"
+    todo ls
+    todo -g ls
+    todo c a1b2c3
+    todo t a1b2c3
+    todo e a1b2c3 "Updated Task"
+    todo -g e a1b2c3 "Updated Global Task"
+    todo d a1b2c3
+    todo st
+    todo -g st
+    todo se "node"
     todo clear | cls
 `);
 
