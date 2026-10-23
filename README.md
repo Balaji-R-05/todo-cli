@@ -173,3 +173,8 @@ To fully remove the global `todo` command and clean up:
     - **Linux / macOS:** `./uninstall.sh`
 3.  **Close the terminal.**
 4.  **Delete the `todo-cli` folder** from your computer.
+
+
+## License
+
+[MIT](LICENSE)

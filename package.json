@@ -17,7 +17,7 @@
     "nodejs"
   ],
   "author": "Balaji-R-05",
-  "license": "ISC",
+  "license": "MIT",
   "type": "module",
   "dependencies": {
     "chalk": "^5.5.0",
