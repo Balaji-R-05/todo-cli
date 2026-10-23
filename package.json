@@ -5,7 +5,9 @@
   "main": "todo.js",
   "scripts": {
     "dev": "node todo.js show",
-    "test": "node --test"
+    "test": "node --test",
+    "build:bundle": "node scripts/bundle.js",
+    "build:binary": "node scripts/build-binary.js"
   },
   "keywords": [
     "todo",
@@ -27,6 +29,10 @@
     "todo": "./todo.js"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=20.10.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "postject": "^1.0.0-alpha.6"
   }
 }

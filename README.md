@@ -16,10 +16,29 @@ Stores todos in a JSON file and supports managing tasks via a command-line inter
 - `--json` output mode for scripting and AI agent/tool use (Claude Code, Codex, etc.)
 
 
-## Prerequisites
+## Install
+
+### Option A: Standalone binary (no Node.js required)
+Downloads a prebuilt, self-contained `todo` executable from the
+[latest release](https://github.com/Balaji-R-05/todo-cli/releases/latest) and
+puts it on your PATH. Nothing else to install.
+
+- **Linux / macOS:**
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/Balaji-R-05/todo-cli/main/install.sh | bash
+  ```
+- **Windows (PowerShell):**
+  ```powershell
+  irm https://raw.githubusercontent.com/Balaji-R-05/todo-cli/main/install.ps1 | iex
+  ```
+
+Prefer to inspect a script before running it? Download it, read it, then run
+it locally — both are plain shell/PowerShell, no build step.
+
+### Option B: From source (requires Node.js)
 
 Before installing, ensure you have the following:
-- **Node.js**: `v20.0.0` or higher (Required for Commander.js 14)
+- **Node.js**: `v20.10.0` or higher (Required for Commander.js 14 and native JSON module imports)
 ```bash
 node --version
 ```
@@ -31,14 +50,14 @@ npm --version
 If not installed, install it from [here](https://nodejs.org/en/download/)
 
 
-### 1. Clone the repository
+#### 1. Clone the repository
 ```bash
 git clone https://github.com/Balaji-R-05/todo-cli.git
 cd todo-cli
 ```
 
 
-### 2. One-Click Install
+#### 2. One-Click Install
 Run the script for your Operating System to install dependencies and link the command globally:
 
 - **Windows:** Double-click `setup.bat` or run:
@@ -161,6 +180,17 @@ No extra dependencies needed — it uses Node's built-in test runner
 CI runs this same suite on every push/PR to `main`, across Node 20.x and
 the latest LTS, on both Ubuntu and Windows — see
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+
+### Building the standalone binary
+```bash
+npm run build:binary
+```
+Bundles `todo.js` with esbuild, then uses Node's built-in SEA (Single
+Executable Application) tooling to produce `dist/todo-<os>-<arch>` — a
+Node-free executable for whichever OS/arch you ran the command on. Pushing
+a `v*.*.*` tag builds this for Linux/macOS/Windows in CI and attaches the
+binaries (plus `install.sh`/`install.ps1`) to a GitHub Release — see
+[`.github/workflows/release.yml`](.github/workflows/release.yml).
 
 
 ## Uninstallation

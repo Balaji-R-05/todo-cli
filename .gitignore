@@ -1,6 +1,9 @@
 # Dependencies
 node_modules
 
+# Build output (binaries built fresh per release, not committed)
+dist/
+
 # Todo data and backups (user-specific, not source)
 todos.json
 *.tmp

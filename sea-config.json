@@ -1,0 +1,5 @@
+{
+  "main": "dist/todo.cjs",
+  "output": "dist/todo.blob",
+  "disableExperimentalSEAWarning": true
+}

@@ -5,13 +5,10 @@ import path from 'path';
 import os from 'os';
 import readline from 'readline';
 import { randomUUID } from 'crypto';
-import { createRequire } from 'module';
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { shortId, findTodoIndex, normalizeTodo, MIN_ID_QUERY_LENGTH } from './lib.js';
-
-const require = createRequire(import.meta.url);
-const pkg = require('./package.json');
+import pkg from './package.json' with { type: 'json' };
 
 const program = new Command();
 
