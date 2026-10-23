@@ -74,11 +74,17 @@ const readTodo = () => {
         if (!Array.isArray(todos)) {
             throw new Error('expected a JSON array');
         }
-        // Older todos.json files predate createdAt/updatedAt; backfill them
-        // in memory so missing fields never crash a read. Todos touched by
-        // a later mutation get this persisted via saveTodo.
+        // Older todos.json files predate fields normalizeTodo fills in
+        // (e.g. createdAt/updatedAt). Backfill them so a missing field never
+        // crashes a read, and write the result straight back so the file is
+        // migrated to the current schema on its very next read, not just
+        // whenever a todo happens to be mutated next.
         const now = new Date().toISOString();
-        return todos.map((todo) => normalizeTodo(todo, now));
+        const normalized = todos.map((todo) => normalizeTodo(todo, now));
+        if (JSON.stringify(normalized) !== JSON.stringify(todos)) {
+            saveTodo(normalized);
+        }
+        return normalized;
     } catch (error) {
         // Stop before any command can write over the broken file.
         const backupPath = `${filePath}.corrupt-${Date.now()}.bak`;

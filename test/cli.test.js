@@ -129,6 +129,28 @@ describe('todo complete / toggle / edit / delete', () => {
         assert.match(todo.updatedAt, /^\d{4}-\d{2}-\d{2}T/);
     });
 
+    test('reading a legacy todo migrates the file on disk immediately, even on a read-only command', () => {
+        fs.writeFileSync(path.join(cwd, 'todos.json'), JSON.stringify([
+            { id: 'aaaa1111-0000-0000-0000-000000000000', text: 'legacy', completed: false },
+        ]));
+
+        run(['show']);
+
+        const todo = readTodosFile()[0];
+        assert.match(todo.createdAt, /^\d{4}-\d{2}-\d{2}T/);
+        assert.match(todo.updatedAt, /^\d{4}-\d{2}-\d{2}T/);
+    });
+
+    test('reading an already-current todo file does not rewrite it', () => {
+        run(['add', 'Task']);
+        const before = fs.statSync(path.join(cwd, 'todos.json')).mtimeMs;
+
+        run(['show']);
+
+        const after = fs.statSync(path.join(cwd, 'todos.json')).mtimeMs;
+        assert.equal(after, before);
+    });
+
     test('delete removes the todo', () => {
         const id = idFromAddOutput(run(['add', 'Temporary']));
         run(['delete', id]);
