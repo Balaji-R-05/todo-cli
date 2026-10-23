@@ -76,6 +76,11 @@ first use), but if your project has a `.gitignore`, running it adds a
 only applies to the local file — `-g`/global init skips it, since the
 global list lives in your home directory, not the repo.
 
+`todo clear` asks for confirmation before it will delete everything. Pass
+`-y`/`--yes` to skip the prompt (required for scripts/CI anyway, since
+`clear` refuses outright — rather than hanging — whenever stdin isn't an
+interactive terminal, in both text and `--json` mode).
+
 Tasks are referenced by the short ID shown in `todo ls` (for example `a1b2c3`). IDs don't change when other tasks are deleted. You can type any unique prefix of at least 4 characters.
 
 ### ✨ Global Storage
@@ -135,6 +140,12 @@ Every command (in both text and `--json` mode) exits with one of:
 
 Scripts and agents should check the exit code, not parse stdout text, to
 know whether a command succeeded.
+
+### Plain-text output
+Color is dropped automatically when output isn't a terminal, or when the
+`NO_COLOR` env var is set. Pass the global `--no-color` flag to force
+plain text even in a color-capable terminal. `--json` mode never uses
+color in the first place.
 
 
 ## Development

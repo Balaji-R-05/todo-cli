@@ -227,6 +227,23 @@ describe('exit codes', () => {
     });
 });
 
+describe('--no-color', () => {
+    // eslint-disable-next-line no-control-regex
+    const ansiPattern = /\x1b\[\d+m/;
+
+    test('strips ANSI codes even when the terminal would otherwise force color', () => {
+        run(['add', 'Buy milk']);
+        const env = { ...process.env, FORCE_COLOR: '1' };
+
+        const withColor = execFileSync('node', [todoBin, 'show'], { cwd, encoding: 'utf-8', env });
+        assert.match(withColor, ansiPattern);
+
+        const withoutColor = execFileSync('node', [todoBin, '--no-color', 'show'], { cwd, encoding: 'utf-8', env });
+        assert.doesNotMatch(withoutColor, ansiPattern);
+        assert.match(withoutColor, /Buy milk/);
+    });
+});
+
 describe('todo -g (global list)', () => {
     test('is isolated from the local list', () => {
         const home = fs.mkdtempSync(path.join(os.tmpdir(), 'todo-cli-home-'));

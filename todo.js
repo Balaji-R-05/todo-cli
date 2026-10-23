@@ -170,7 +170,16 @@ program
     .description('CLI Todo Manager with JSON and short IDs. Built using Commander.js')
     .version(pkg.version)
     .option('-g, --global', 'Use global todo list stored in home directory')
-    .option('-j, --json', 'Output machine-readable JSON instead of formatted text');
+    .option('-j, --json', 'Output machine-readable JSON instead of formatted text')
+    .option('--no-color', 'Disable colored output (the NO_COLOR env var works too)');
+
+// chalk already auto-detects NO_COLOR/non-TTY output, but --no-color is an
+// explicit opt-in that should win even in a color-capable terminal.
+program.hook('preAction', (thisCommand) => {
+    if (thisCommand.opts().color === false) {
+        chalk.level = 0;
+    }
+});
 
 /* ------------------ CLI Commands ------------------ */
 
