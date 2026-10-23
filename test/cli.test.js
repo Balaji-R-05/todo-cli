@@ -19,8 +19,19 @@ afterEach(() => {
     fs.rmSync(cwd, { recursive: true, force: true });
 });
 
-// Runs the CLI as a subprocess against the temp cwd and returns stdout.
-const run = (args) => execFileSync('node', [todoBin, ...args], { cwd, encoding: 'utf-8' });
+// Runs the CLI as a subprocess against the temp cwd. Returns stdout,
+// tolerating a non-zero exit (use runWithStatus to assert on the code).
+const run = (args) => runWithStatus(args).stdout;
+
+// Same, but also returns the process exit code instead of throwing on it.
+const runWithStatus = (args) => {
+    try {
+        const stdout = execFileSync('node', [todoBin, ...args], { cwd, encoding: 'utf-8' });
+        return { stdout, stderr: '', status: 0 };
+    } catch (error) {
+        return { stdout: error.stdout, stderr: error.stderr, status: error.status };
+    }
+};
 
 const readTodosFile = () => JSON.parse(fs.readFileSync(path.join(cwd, 'todos.json'), 'utf-8'));
 
@@ -38,8 +49,9 @@ describe('todo add / show', () => {
     });
 
     test('add rejects empty text and writes nothing', () => {
-        const output = run(['add', '   ']);
-        assert.match(output, /cannot be empty/);
+        const { stdout, status } = runWithStatus(['add', '   ']);
+        assert.match(stdout, /cannot be empty/);
+        assert.equal(status, 1);
         assert.equal(fs.existsSync(path.join(cwd, 'todos.json')), false);
     });
 
@@ -47,6 +59,13 @@ describe('todo add / show', () => {
         run(['add', '  Walk the dog  ']);
         const todos = readTodosFile();
         assert.equal(todos[0].text, 'Walk the dog');
+    });
+
+    test('add sets createdAt and updatedAt to the same timestamp', () => {
+        run(['add', 'Buy milk']);
+        const todo = readTodosFile()[0];
+        assert.match(todo.createdAt, /^\d{4}-\d{2}-\d{2}T/);
+        assert.equal(todo.createdAt, todo.updatedAt);
     });
 });
 
@@ -78,6 +97,38 @@ describe('todo complete / toggle / edit / delete', () => {
         assert.equal(readTodosFile()[0].text, 'New text');
     });
 
+    test('edit/complete/toggle bump updatedAt but leave createdAt alone', () => {
+        const id = idFromAddOutput(run(['add', 'Task']));
+        const { createdAt } = readTodosFile()[0];
+
+        run(['edit', id, 'Task v2']);
+        let todo = readTodosFile()[0];
+        assert.equal(todo.createdAt, createdAt);
+        assert.ok(new Date(todo.updatedAt).getTime() >= new Date(createdAt).getTime());
+
+        run(['complete', id]);
+        todo = readTodosFile()[0];
+        assert.equal(todo.createdAt, createdAt);
+
+        run(['toggle', id]);
+        todo = readTodosFile()[0];
+        assert.equal(todo.createdAt, createdAt);
+    });
+
+    test('reading a legacy todo without timestamps backfills them instead of crashing', () => {
+        fs.writeFileSync(path.join(cwd, 'todos.json'), JSON.stringify([
+            { id: 'aaaa1111-0000-0000-0000-000000000000', text: 'legacy', completed: false },
+        ]));
+
+        const output = run(['show']);
+        assert.match(output, /legacy/);
+
+        run(['complete', 'aaaa1111']);
+        const todo = readTodosFile()[0];
+        assert.match(todo.createdAt, /^\d{4}-\d{2}-\d{2}T/);
+        assert.match(todo.updatedAt, /^\d{4}-\d{2}-\d{2}T/);
+    });
+
     test('delete removes the todo', () => {
         const id = idFromAddOutput(run(['add', 'Temporary']));
         run(['delete', id]);
@@ -86,17 +137,19 @@ describe('todo complete / toggle / edit / delete', () => {
 
     test('a query shorter than 4 characters is rejected', () => {
         idFromAddOutput(run(['add', 'Something']));
-        const output = run(['complete', 'abc']);
-        assert.match(output, /at least 4 characters/);
+        const { stdout, status } = runWithStatus(['complete', 'abc']);
+        assert.match(stdout, /at least 4 characters/);
+        assert.equal(status, 1);
     });
 
     test('an unknown id reports no match', () => {
         idFromAddOutput(run(['add', 'Something']));
-        const output = run(['complete', 'zzzzzz']);
-        assert.match(output, /No todo found/);
+        const { stdout, status } = runWithStatus(['complete', 'zzzzzz']);
+        assert.match(stdout, /No todo found/);
+        assert.equal(status, 1);
     });
 
-    test('an ambiguous prefix is reported with the match count', () => {
+    test('an ambiguous prefix is reported with the match count and exit code 2', () => {
         // Write two todos that deliberately share a 4-char id prefix,
         // rather than looping `add` and hoping for a random UUID collision.
         fs.writeFileSync(path.join(cwd, 'todos.json'), JSON.stringify([
@@ -104,8 +157,9 @@ describe('todo complete / toggle / edit / delete', () => {
             { id: 'aaaa2222-0000-0000-0000-000000000000', text: 'second', completed: false },
         ]));
 
-        const output = run(['complete', 'aaaa']);
-        assert.match(output, /matches 2 todos/);
+        const { stdout, status } = runWithStatus(['complete', 'aaaa']);
+        assert.match(stdout, /matches 2 todos/);
+        assert.equal(status, 2);
     });
 });
 
@@ -149,6 +203,27 @@ describe('todo clear', () => {
     test('clear on an empty list is a no-op', () => {
         const output = run(['clear', '-y']);
         assert.match(output, /No todos to clear/);
+    });
+
+    test('clear without -y in a non-interactive session refuses instead of hanging', () => {
+        run(['add', 'A']);
+        const { stdout, status } = runWithStatus(['clear']);
+        assert.match(stdout, /non-interactive/);
+        assert.equal(status, 1);
+        assert.equal(readTodosFile().length, 1);
+    });
+});
+
+describe('exit codes', () => {
+    test('a successful command exits 0', () => {
+        assert.equal(runWithStatus(['add', 'A']).status, 0);
+    });
+
+    test('a corrupted todos.json exits 3', () => {
+        fs.writeFileSync(path.join(cwd, 'todos.json'), '{not valid json');
+        const { stderr, status } = runWithStatus(['show']);
+        assert.match(stderr, /corrupted/);
+        assert.equal(status, 3);
     });
 });
 

@@ -19,10 +19,18 @@ afterEach(() => {
     fs.rmSync(cwd, { recursive: true, force: true });
 });
 
-// Runs the CLI in --json mode and parses the single JSON line it prints.
-const runJson = (args) => JSON.parse(
-    execFileSync('node', [todoBin, '--json', ...args], { cwd, encoding: 'utf-8' })
-);
+// Runs the CLI in --json mode and parses the single JSON line it prints,
+// tolerating a non-zero exit (use runJsonWithStatus to assert on the code).
+const runJson = (args) => runJsonWithStatus(args).result;
+
+const runJsonWithStatus = (args) => {
+    try {
+        const stdout = execFileSync('node', [todoBin, '--json', ...args], { cwd, encoding: 'utf-8' });
+        return { result: JSON.parse(stdout), status: 0 };
+    } catch (error) {
+        return { result: JSON.parse(error.stdout), status: error.status };
+    }
+};
 
 describe('--json add / show / stats / search', () => {
     test('add returns the created todo with a full UUID', () => {
@@ -33,10 +41,17 @@ describe('--json add / show / stats / search', () => {
         assert.equal(result.data.completed, false);
     });
 
+    test('add returns matching createdAt/updatedAt timestamps', () => {
+        const result = runJson(['add', 'Buy milk']);
+        assert.match(result.data.createdAt, /^\d{4}-\d{2}-\d{2}T/);
+        assert.equal(result.data.createdAt, result.data.updatedAt);
+    });
+
     test('add rejects empty text as a JSON error', () => {
-        const result = runJson(['add', '   ']);
+        const { result, status } = runJsonWithStatus(['add', '   ']);
         assert.equal(result.ok, false);
         assert.match(result.error, /cannot be empty/);
+        assert.equal(status, 1);
     });
 
     test('show returns an array, empty or not', () => {
@@ -89,6 +104,14 @@ describe('--json complete / toggle / edit / delete', () => {
         assert.equal(result.data.text, 'New text');
     });
 
+    test('edit bumps updatedAt but keeps createdAt', () => {
+        const added = runJson(['add', 'Old text']);
+        const { createdAt } = added.data;
+        const result = runJson(['edit', added.data.id, 'New text']);
+        assert.equal(result.data.createdAt, createdAt);
+        assert.ok(new Date(result.data.updatedAt).getTime() >= new Date(createdAt).getTime());
+    });
+
     test('delete returns the removed todo', () => {
         const id = addAndGetId('Temporary');
         const result = runJson(['delete', id]);
@@ -99,29 +122,32 @@ describe('--json complete / toggle / edit / delete', () => {
 
     test('an unresolvable id returns a JSON error, not a text error', () => {
         addAndGetId('Something');
-        const result = runJson(['complete', 'zzzzzz']);
+        const { result, status } = runJsonWithStatus(['complete', 'zzzzzz']);
         assert.equal(result.ok, false);
         assert.match(result.error, /No todo found/);
+        assert.equal(status, 1);
     });
 
-    test('an ambiguous prefix returns a JSON error with the match count', () => {
+    test('an ambiguous prefix returns a JSON error with the match count and exit code 2', () => {
         fs.writeFileSync(path.join(cwd, 'todos.json'), JSON.stringify([
             { id: 'aaaa1111-0000-0000-0000-000000000000', text: 'first', completed: false },
             { id: 'aaaa2222-0000-0000-0000-000000000000', text: 'second', completed: false },
         ]));
 
-        const result = runJson(['complete', 'aaaa']);
+        const { result, status } = runJsonWithStatus(['complete', 'aaaa']);
         assert.equal(result.ok, false);
         assert.equal(result.matchCount, 2);
+        assert.equal(status, 2);
     });
 });
 
 describe('--json clear', () => {
     test('refuses to clear without --yes, as a JSON error', () => {
         runJson(['add', 'A']);
-        const result = runJson(['clear']);
+        const { result, status } = runJsonWithStatus(['clear']);
         assert.equal(result.ok, false);
         assert.match(result.error, /Pass --yes/);
+        assert.equal(status, 1);
         assert.equal(runJson(['show']).data.length, 1);
     });
 

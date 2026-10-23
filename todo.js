@@ -8,7 +8,7 @@ import { randomUUID } from 'crypto';
 import { createRequire } from 'module';
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { shortId, findTodoIndex, MIN_ID_QUERY_LENGTH } from './lib.js';
+import { shortId, findTodoIndex, normalizeTodo, MIN_ID_QUERY_LENGTH } from './lib.js';
 
 const require = createRequire(import.meta.url);
 const pkg = require('./package.json');
@@ -35,20 +35,30 @@ const getFilePath = () => {
 
 const isJsonMode = () => Boolean(program.opts().json);
 
-// Prints a single JSON line on success. Only ever called in --json mode.
+// Prints a single JSON line on success.
+// Only ever called in --json mode.
 const printSuccess = (data) => {
     console.log(JSON.stringify({ ok: true, data }));
 };
 
-// Prints an error either as a JSON line or as chalk-colored text,
-// depending on --json. Used for both validation and "no match" cases.
-const printError = (message, extra = {}) => {
+// Exit code convention: 
+// 0 success, 1 generic/user error, 2 ambiguous ID match, 3 corrupted data file.
+// Agents/scripts should rely on this, not on parsing stdout text.
+const EXIT_GENERIC_ERROR = 1;
+const EXIT_AMBIGUOUS = 2;
+const EXIT_CORRUPTED = 3;
+
+// Prints an error either as a JSON line or as chalk-colored text, depending on --json, and sets the process exit code.
+// Used for both validation and "no match" cases.
+const printError = (message, extra = {}, exitCode = EXIT_GENERIC_ERROR) => {
     if (isJsonMode()) {
         console.log(JSON.stringify({ ok: false, error: message, ...extra }));
     } else {
         console.log(chalk.red(message));
     }
+    process.exitCode = exitCode;
 };
+
 
 /* ------------------ Utils ------------------ */
 
@@ -64,7 +74,11 @@ const readTodo = () => {
         if (!Array.isArray(todos)) {
             throw new Error('expected a JSON array');
         }
-        return todos;
+        // Older todos.json files predate createdAt/updatedAt; backfill them
+        // in memory so missing fields never crash a read. Todos touched by
+        // a later mutation get this persisted via saveTodo.
+        const now = new Date().toISOString();
+        return todos.map((todo) => normalizeTodo(todo, now));
     } catch (error) {
         // Stop before any command can write over the broken file.
         const backupPath = `${filePath}.corrupt-${Date.now()}.bak`;
@@ -81,7 +95,7 @@ const readTodo = () => {
             console.error(chalk.yellow(`Backup saved to: ${backupPath}`));
             console.error(chalk.yellow(`Original left untouched: ${filePath}`));
         }
-        process.exit(1);
+        process.exit(EXIT_CORRUPTED);
     }
 };
 
@@ -106,7 +120,7 @@ const resolveTodo = (todos, query) => {
             printError(`No todo found with ID "${query}".`);
             return null;
         case 'ambiguous':
-            printError(`ID "${query}" matches ${result.count} todos. Type more characters.`, { matchCount: result.count });
+            printError(`ID "${query}" matches ${result.count} todos. Type more characters.`, { matchCount: result.count }, EXIT_AMBIGUOUS);
             return null;
         default:
             return result.index;
@@ -118,6 +132,25 @@ const formatTodo = (todo) => {
         ? chalk.green('[✔]')
         : chalk.red('[ ]');
     return `${chalk.gray(shortId(todo))} ${status} ${todo.text}`;
+};
+
+// Adds "todos.json" to an existing .gitignore so the local todo file isn't committed.
+// No-op if there's no .gitignore, or it already ignores the file.
+const addToGitignore = () => {
+    const gitignorePath = path.resolve('.gitignore');
+    if (!fs.existsSync(gitignorePath)) {
+        return false;
+    }
+
+    const contents = fs.readFileSync(gitignorePath, 'utf-8');
+    const alreadyIgnored = contents.split('\n').some((line) => line.trim() === 'todos.json');
+    if (alreadyIgnored) {
+        return false;
+    }
+
+    const prefix = contents.length === 0 || contents.endsWith('\n') ? '' : '\n';
+    fs.appendFileSync(gitignorePath, `${prefix}todos.json\n`);
+    return true;
 };
 
 const confirm = (question) => {
@@ -147,19 +180,28 @@ program
     .description('Initialize todo-cli (local or global)')
     .action(() => {
         const filePath = getFilePath();
+        const isGlobal = program.opts().global;
+        const gitignored = isGlobal ? false : addToGitignore();
+
         if (fs.existsSync(filePath)) {
             if (isJsonMode()) {
-                printSuccess({ path: filePath, created: false });
+                printSuccess({ path: filePath, created: false, gitignored });
             } else {
                 console.log(chalk.yellow(`Todo file already exists: ${filePath}`));
+                if (gitignored) {
+                    console.log(chalk.green('Added todos.json to .gitignore'));
+                }
             }
             return;
         }
         saveTodo([]);
         if (isJsonMode()) {
-            printSuccess({ path: filePath, created: true });
+            printSuccess({ path: filePath, created: true, gitignored });
         } else {
             console.log(chalk.green(`Todo file initialized: ${filePath}`));
+            if (gitignored) {
+                console.log(chalk.green('Added todos.json to .gitignore'));
+            }
         }
     });
 
@@ -176,10 +218,13 @@ program.command('add')
         }
 
         const todos = readTodo();
+        const now = new Date().toISOString();
         const newTodo = {
             id: randomUUID(),
             text: trimmed,
-            completed: false
+            completed: false,
+            createdAt: now,
+            updatedAt: now
         };
         todos.push(newTodo);
         saveTodo(todos);
@@ -260,6 +305,7 @@ program
         }
 
         todos[index].text = trimmed;
+        todos[index].updatedAt = new Date().toISOString();
         saveTodo(todos);
 
         if (isJsonMode()) {
@@ -283,6 +329,7 @@ program
         }
 
         todos[index].completed = true;
+        todos[index].updatedAt = new Date().toISOString();
         saveTodo(todos);
 
         if (isJsonMode()) {
@@ -306,6 +353,7 @@ program
         }
 
         todos[index].completed = !todos[index].completed;
+        todos[index].updatedAt = new Date().toISOString();
         saveTodo(todos);
 
         if (isJsonMode()) {
@@ -390,6 +438,12 @@ program
             if (isJsonMode()) {
                 // An interactive prompt would hang a non-interactive/agent caller.
                 printError('Refusing to clear without confirmation in --json mode. Pass --yes to proceed.');
+                return;
+            }
+
+            if (!process.stdin.isTTY) {
+                // No one can answer a prompt here; refuse instead of hanging.
+                printError('Refusing to clear without confirmation in a non-interactive session. Pass --yes to proceed.');
                 return;
             }
 

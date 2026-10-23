@@ -1,6 +1,6 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { shortId, findTodoIndex, SHORT_ID_LENGTH, MIN_ID_QUERY_LENGTH } from '../lib.js';
+import { shortId, findTodoIndex, normalizeTodo, SHORT_ID_LENGTH, MIN_ID_QUERY_LENGTH } from '../lib.js';
 
 describe('shortId', () => {
     test('truncates to SHORT_ID_LENGTH characters', () => {
@@ -59,5 +59,38 @@ describe('findTodoIndex', () => {
     test('handles an empty todo list', () => {
         const result = findTodoIndex([], 'aaaa');
         assert.deepEqual(result, { status: 'not-found' });
+    });
+});
+
+describe('normalizeTodo', () => {
+    test('backfills both timestamps on a todo with neither', () => {
+        const todo = { id: 'a', text: 'old', completed: false };
+        const result = normalizeTodo(todo, '2026-01-01T00:00:00.000Z');
+        assert.equal(result.createdAt, '2026-01-01T00:00:00.000Z');
+        assert.equal(result.updatedAt, '2026-01-01T00:00:00.000Z');
+    });
+
+    test('leaves existing timestamps untouched', () => {
+        const todo = {
+            id: 'a',
+            createdAt: '2025-01-01T00:00:00.000Z',
+            updatedAt: '2025-06-01T00:00:00.000Z'
+        };
+        const result = normalizeTodo(todo, '2026-01-01T00:00:00.000Z');
+        assert.equal(result.createdAt, '2025-01-01T00:00:00.000Z');
+        assert.equal(result.updatedAt, '2025-06-01T00:00:00.000Z');
+    });
+
+    test('falls back updatedAt to an existing createdAt rather than the fallback', () => {
+        const todo = { id: 'a', createdAt: '2025-01-01T00:00:00.000Z' };
+        const result = normalizeTodo(todo, '2026-01-01T00:00:00.000Z');
+        assert.equal(result.createdAt, '2025-01-01T00:00:00.000Z');
+        assert.equal(result.updatedAt, '2025-01-01T00:00:00.000Z');
+    });
+
+    test('does not mutate the original todo', () => {
+        const todo = { id: 'a' };
+        normalizeTodo(todo, '2026-01-01T00:00:00.000Z');
+        assert.equal(todo.createdAt, undefined);
     });
 });

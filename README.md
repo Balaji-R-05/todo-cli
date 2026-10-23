@@ -59,7 +59,7 @@ Once installed, you can run the `todo` command from **any directory** in your te
 
 | Command | Shorthand | Description |
 | :--- | :--- | :--- |
-| `todo init` | - | Initialize todo-cli (optional) |
+| `todo init` | - | Initialize todo-cli (optional); also adds `todos.json` to `.gitignore` if one exists |
 | `todo add "task"` | `a` | Add a new task (local or global) |
 | `todo show` | `ls` | List all tasks |
 | `todo toggle <id>` | `t` | Toggle completion of task |
@@ -69,6 +69,12 @@ Once installed, you can run the `todo` command from **any directory** in your te
 | `todo stats` | `st` | See completion stats |
 | `todo search "key"` | `se` | Find tasks by keyword |
 | `todo clear` | `cls` | Delete ALL tasks (asks to confirm; use `-y` to skip) |
+
+`todo init` is optional (any other command will create `todos.json` on
+first use), but if your project has a `.gitignore`, running it adds a
+`todos.json` entry so your local task list doesn't get committed. This
+only applies to the local file — `-g`/global init skips it, since the
+global list lives in your home directory, not the repo.
 
 Tasks are referenced by the short ID shown in `todo ls` (for example `a1b2c3`). IDs don't change when other tasks are deleted. You can type any unique prefix of at least 4 characters.
 
@@ -99,10 +105,10 @@ scripts and agents (Claude Code, Codex, etc.) can parse the result
 reliably instead of regex-matching colored text:
 ```bash
 todo --json add "Buy milk"
-# {"ok":true,"data":{"id":"0a21b654-...","text":"Buy milk","completed":false}}
+# {"ok":true,"data":{"id":"0a21b654-...","text":"Buy milk","completed":false,"createdAt":"2026-10-23T12:00:00.000Z","updatedAt":"2026-10-23T12:00:00.000Z"}}
 
 todo --json show
-# {"ok":true,"data":[{"id":"...","text":"Buy milk","completed":false}]}
+# {"ok":true,"data":[{"id":"...","text":"Buy milk","completed":false,"createdAt":"...","updatedAt":"..."}]}
 
 todo --json complete zzzzzz
 # {"ok":false,"error":"No todo found with ID \"zzzzzz\"."}
@@ -111,8 +117,24 @@ todo --json complete zzzzzz
 - Error shape: `{ "ok": false, "error": "message" }`
 - `data` always includes the full todo ID (not the truncated short ID used
   in text mode), so a script/agent can target a todo unambiguously.
+- Every todo carries `createdAt` (set on `add`) and `updatedAt` (bumped by
+  `edit`/`complete`/`toggle`), both ISO-8601 timestamps. Todos from an older
+  `todos.json` without these fields get them backfilled automatically the
+  next time they're read.
 - `todo --json clear` requires `--yes` — it refuses rather than hanging on
   an interactive confirmation prompt.
+
+### Exit codes
+Every command (in both text and `--json` mode) exits with one of:
+| Code | Meaning |
+| :--- | :--- |
+| `0` | Success |
+| `1` | Generic/user error (bad input, not found, empty text) |
+| `2` | Ambiguous ID — your prefix matched more than one todo |
+| `3` | `todos.json` is corrupted (a backup is written next to it) |
+
+Scripts and agents should check the exit code, not parse stdout text, to
+know whether a command succeeded.
 
 
 ## Development

@@ -27,3 +27,13 @@ export const findTodoIndex = (todos, query) => {
     }
     return { status: 'ok', index: matches[0] };
 };
+
+// Fills in createdAt/updatedAt on a todo loaded from an older todos.json
+// that predates those fields, so reading old data never crashes.
+// `fallback` is passed in (rather than read here) so a whole file's worth
+// of todos normalized in one pass share the same timestamp.
+export const normalizeTodo = (todo, fallback) => ({
+    ...todo,
+    createdAt: todo.createdAt ?? fallback,
+    updatedAt: todo.updatedAt ?? todo.createdAt ?? fallback,
+});
